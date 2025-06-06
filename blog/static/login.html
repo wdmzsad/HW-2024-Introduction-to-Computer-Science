@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录注册界面</title>
+    <!-- 引入 Element UI 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            background: url('/static/images/background.jpg') no-repeat center center fixed;
+            background-size: cover;
+            font-family: Arial, sans-serif;
+        }
+
+        #app {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        .box-card {
+            background: rgba(255, 255, 255, 0.9); /* 半透明背景 */
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <el-card class="box-card" style="width: 400px;">
+            <div slot="header">
+                <!-- 使用条件渲染 -->
+                <span v-if="isLoginMode">登录</span>
+                <span v-else>注册</span>
+            </div>
+            <el-form :model="form" :rules="rules" ref="userForm" label-width="80px">
+                <el-form-item label="用户名" prop="username">
+                    <el-input v-model="form.username" placeholder="请输入用户名"></el-input>
+                </el-form-item>
+                <el-form-item label="密码" prop="password">
+                    <el-input type="password" v-model="form.password" placeholder="请输入密码"></el-input>
+                </el-form-item>
+                <el-form-item v-if="!isLoginMode" label="确认密码" prop="confirmPassword">
+                    <el-input type="password" v-model="form.confirmPassword" placeholder="请再次输入密码"></el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="handleSubmit">
+                        <template v-if="isLoginMode">登录</template>
+                        <template v-else>注册</template>
+                    </el-button>
+                    <el-button @click="resetForm">重置</el-button>
+                </el-form-item>
+                <el-form-item>
+                    <el-link type="primary" @click="toggleMode">
+                        <template v-if="isLoginMode">没有账号？点击注册</template>
+                        <template v-else>已有账号？点击登录</template>
+                    </el-link>
+                </el-form-item>                
+            </el-form>
+        </el-card>
+    </div>
+
+    <!-- 引入 Vue 和 Element Plus -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- 登录和注册逻辑 -->
+    <script>
+        const { createApp } = Vue;
+        const app = createApp({
+            data() {
+                return {
+                    isLoginMode: true, // true 表示登录模式，false 表示注册模式
+                    form: {
+                        username: '',
+                        password: '',
+                        confirmPassword: '' // 注册时使用
+                    },
+                    rules: {
+                        username: [
+                            { required: true, message: '请输入用户名', trigger: 'blur' }
+                        ],
+                        password: [
+                            { required: true, message: '请输入密码', trigger: 'blur' }
+                        ],
+                        confirmPassword: [
+                            { 
+                                required: true, 
+                                message: '请确认密码', 
+                                trigger: 'blur' 
+                            },
+                            {
+                                validator: (rule, value, callback) => {
+                                    // 直接使用 this.form.password
+                                    if (value !== this.form.password) {
+                                        callback(new Error('两次输入的密码不一致'));
+                                    } else {
+                                        callback();
+                                    }
+                                },
+                                trigger: 'blur'
+                            }
+                        ]
+                    }
+                };
+            },
+            methods: {
+                async handleSubmit() {
+                    this.$refs.userForm.validate(async (valid) => {
+                        if (valid) {
+                            let url;
+                            if (this.isLoginMode) {
+                                url = 'http://127.0.0.1:8000/users/login/';
+                            } else {
+                                url = 'http://127.0.0.1:8000/users/register/';
+                            }
+                            const payload = {
+                                username: this.form.username,
+                                password: this.form.password,
+                            };
+                            if (!this.isLoginMode) {
+                                payload.confirmPassword = this.form.confirmPassword;
+                            }
+                            try {
+                                const response = await axios.post(url, payload);
+                                alert(response.data.message);
+                                if (!this.isLoginMode) {
+                                    this.isLoginMode = true; // 注册成功后切换到登录模式
+                                }
+                            } catch (error) {
+                                console.error(error.response?.data?.message || '请求失败');
+                                alert(error.response?.data?.message || '请求失败');
+                            }
+                        } else {
+                            console.log('表单验证失败');
+                        }
+                    });
+                },
+                resetForm() {
+                    this.$refs.userForm.resetFields();
+                },
+                toggleMode() {
+                    this.isLoginMode = !this.isLoginMode;
+                    this.resetForm();
+                },
+            }
+        });
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>
